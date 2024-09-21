@@ -1,3 +1,4 @@
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -11,29 +12,33 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class dnsQuery extends Thread {
+    private JTextArea logArea;
     private Socket clientSocket = null;
     private int userId;
+    private DefaultListModel<String> userListModel;
     private static final String CACHE_FILE_NAME = "DNS_MAPPING.txt";
 
-    dnsQuery(Socket sSock, int id) {
+    // Constructor
+    dnsQuery(Socket sSock, int id, JTextArea logArea, DefaultListModel<String> userListModel) {
         this.clientSocket = sSock;
         this.userId = id;
+        this.logArea = logArea;
+        this.userListModel = userListModel;
     }
 
+
     private String ipLookup(String address) {
-        InetAddress inetAddress =null;
+        InetAddress inetAddress = null;
         String hostName;
         String hostAddress;
         String result;
         try {
             inetAddress = InetAddress.getByName(address);
         } catch (Exception e) {
-            // System.err.println("Exception: " + e.getMessage());
             return "Host not found";
         }
 
         if (inetAddress != null) {
-
             hostName = inetAddress.getHostName();
             hostAddress = inetAddress.getHostAddress();
             result = hostName + ":" + hostAddress;
@@ -46,27 +51,22 @@ class dnsQuery extends Thread {
             } else {
                 return "Local DNS: " + cachedResult;
             }
-        }
-        else {
+        } else {
             return "Host not found";
         }
     }
 
     private void cacheGenerator(String inetAddressResult) {
-        try
-        {
-            FileWriter fw = new FileWriter(CACHE_FILE_NAME,true); //true: append new addresses to file
+        try {
+            FileWriter fw = new FileWriter(CACHE_FILE_NAME, true); //true: append new addresses to file
             fw.write(inetAddressResult + "\n");
             fw.close();
-        }
-        catch(IOException ioe)
-        {
-            System.err.println("IOException: " + ioe.getMessage());
+        } catch (IOException ioe) {
+            logArea.append("IOException: " + ioe.getMessage() + "\n");
         }
     }
 
     private String cacheReader(String hostName) {
-
         BufferedReader reader;
         String line;
         String hostPattern = "^(" + hostName + ")\\:";
@@ -77,21 +77,17 @@ class dnsQuery extends Thread {
             FileReader fileReader = new FileReader(CACHE_FILE_NAME);
             reader = new BufferedReader(fileReader);
 
-            while((line = reader.readLine()) != null) {
+            while ((line = reader.readLine()) != null) {
                 m = p.matcher(line);
                 if (m.find()) {
-                    // we have the host name in our cache
                     return line;
                 }
             }
-        }
-        catch (FileNotFoundException e) {
-            // if cache file doesn't exist then create one in cacheGenerator
-            System.out.println("- Cache File is generated.");
+        } catch (FileNotFoundException e) {
+            logArea.append("- Cache File is generated.\n");
             return null;
-        }
-        catch (IOException e) {
-            System.err.println("IOException: " + e.getMessage());
+        } catch (IOException e) {
+            logArea.append("IOException: " + e.getMessage() + "\n");
             return null;
         }
 
@@ -99,34 +95,37 @@ class dnsQuery extends Thread {
     }
 
     @Override
-    public void run(){
+    public void run() {
         try {
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(),
-                    true);
-            BufferedReader in = new BufferedReader(
-                    new InputStreamReader( clientSocket.getInputStream()));
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
             String inputLine;
-            String userOutput = null;
+            String userOutput;
 
-            while ((inputLine = in.readLine()) != null)
-            {
+            while ((inputLine = in.readLine()) != null) {
                 if (inputLine.equals("hangup")) {
-                    // closing the client socket - in/out stream
-                    clientSocket.close();
-                    in.close();
-                    out.close();
-                    System.out.printf(">> User %d disconnected.\n", userId);
+                    logArea.append(">> User " + userId + " disconnected.\n");
                     break;
                 }
 
                 userOutput = ipLookup(inputLine);
                 out.println(userOutput);
-
-                System.out.printf("Server to user %d: %s\n", userId, userOutput);
+                logArea.append("Server to user " + userId + ": " + userOutput + "\n");
             }
-        } catch(Exception e){
-            System.err.println("Exception: " + e.getMessage());
+        } catch (IOException e) {
+            logArea.append("Exception: " + e.getMessage() + "\n");
+        } finally {
+            try {
+                // Đóng kết nối và streams sau khi ngắt kết nối
+                if (clientSocket != null && !clientSocket.isClosed()) {
+                    clientSocket.close();
+                }
+                userListModel.removeElement("User " + userId);
+            } catch (IOException e) {
+                logArea.append("Error closing connection: " + e.getMessage() + "\n");
+            }
+            logArea.append(">> User " + userId + " connection closed.\n");
         }
     }
 }
