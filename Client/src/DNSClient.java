@@ -68,14 +68,21 @@ public class DNSClient{
         frame.setVisible(true);
     }
     private void connectToServer() {
+        // Tạo một dialog để nhập IP
+        String host = JOptionPane.showInputDialog(frame, "Enter server IP:", "localhost");
+        if (host == null || host.trim().isEmpty()) {
+            resultArea.append("No IP provided, defaulting to localhost.\n");
+            host = "localhost"; // Nếu người dùng không nhập gì thì mặc định là localhost
+        }
+
+        int port = 5001; // Có thể cho phép nhập cả port nếu cần
         try {
-            String host = "localhost";
-            int port = 5001;
             cSock = new Socket(host, port);
             sendOut = new PrintWriter(cSock.getOutputStream(), true);
             readIn = new BufferedReader(new InputStreamReader(cSock.getInputStream()));
+            resultArea.append("Connected to server at " + host + ":" + port + "\n");
         } catch (IOException e) {
-            resultArea.append("Failed to connect to server.\n");
+            resultArea.append("Failed to connect to server at " + host + ":" + port + ".\n");
         }
     }
     private void sendQuery() {
