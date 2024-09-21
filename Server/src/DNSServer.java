@@ -60,7 +60,6 @@ public class DNSServer {
 			new Thread(() -> {
 				while (isRunning) {
 					try {
-						// Chấp nhận kết nối từ client
 						Socket clientSocket = serverSocket.accept();
 						String userInfo = "User " + idNumber + " connected.";
 						logArea.append(userInfo + "\n");
