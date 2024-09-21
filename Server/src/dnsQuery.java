@@ -55,6 +55,28 @@ class dnsQuery extends Thread {
             return "Host not found";
         }
     }
+    private String reverseLookup(String ipAddress) {
+        try {
+            InetAddress inetAddress = InetAddress.getByName(ipAddress);
+            String hostName = inetAddress.getHostName();
+            String hostAddress = inetAddress.getHostAddress();
+
+            String result = hostAddress + ":" + hostName;
+
+            // Kiểm tra cache
+            String cachedResult = cacheReader(hostAddress);
+            if (cachedResult == null) {
+                // Nếu không có trong cache, lưu vào cache
+                cacheGenerator(result);
+                return "Root DNS: " + result;
+            } else {
+                return "Local DNS: " + cachedResult;
+            }
+        } catch (Exception e) {
+            return "IP not found";
+        }
+    }
+
 
     private void cacheGenerator(String inetAddressResult) {
         try {
@@ -100,16 +122,20 @@ class dnsQuery extends Thread {
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-            String inputLine;
-            String userOutput;
 
+            String inputLine;
             while ((inputLine = in.readLine()) != null) {
                 if (inputLine.equals("hangup")) {
-                    logArea.append(">> User " + userId + " disconnected.\n");
                     break;
                 }
 
-                userOutput = ipLookup(inputLine);
+                String userOutput;
+                if (inputLine.matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
+                    userOutput = reverseLookup(inputLine); // Nếu là IP
+                } else {
+                    userOutput = ipLookup(inputLine); // Nếu là domain name
+                }
+
                 out.println(userOutput);
                 logArea.append("Server to user " + userId + ": " + userOutput + "\n");
             }
@@ -128,4 +154,5 @@ class dnsQuery extends Thread {
             logArea.append(">> User " + userId + " connection closed.\n");
         }
     }
+
 }
