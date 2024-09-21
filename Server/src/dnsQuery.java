@@ -20,68 +20,77 @@ class dnsQuery extends Thread {
         this.userId = id;
     }
 
-    // Hàm tra cứu địa chỉ IP và tên miền
     private String ipLookup(String address) {
-        InetAddress[] inetAddresses;
-        StringBuilder result = new StringBuilder();
-
+        InetAddress inetAddress =null;
+        String hostName;
+        String hostAddress;
+        String result;
         try {
-            // Lấy tất cả các địa chỉ IP hoặc tên miền tương ứng
-            inetAddresses = InetAddress.getAllByName(address);
+            inetAddress = InetAddress.getByName(address);
         } catch (Exception e) {
+            // System.err.println("Exception: " + e.getMessage());
             return "Host not found";
         }
 
-        for (InetAddress inetAddress : inetAddresses) {
-            String hostName = inetAddress.getCanonicalHostName();
-            String hostAddress = inetAddress.getHostAddress();
-            String entry = hostName + ":" + hostAddress;
-            result.append(entry).append("\n");
+        if (inetAddress != null) {
 
-            String cachedResult = cacheReader(hostName, hostAddress);
-            if (cachedResult == null) {
-                // Nếu chưa có trong cache thì thêm vào
-                cacheGenerator(entry);
+            hostName = inetAddress.getHostName();
+            hostAddress = inetAddress.getHostAddress();
+            result = hostName + ":" + hostAddress;
+
+            String cachedResult;
+            if ((cachedResult = cacheReader(hostName)) == null) {
+                // if hostName is not cached, cache it!
+                cacheGenerator(result);
+                return "Root DNS: " + result;
             } else {
-                result.append("Cached Result: ").append(cachedResult).append("\n");
+                return "Local DNS: " + cachedResult;
             }
         }
-        return result.toString().trim();
+        else {
+            return "Host not found";
+        }
     }
 
-    // Ghi kết quả tra cứu vào cache (có thể nhiều IP hoặc tên miền)
     private void cacheGenerator(String inetAddressResult) {
-        try {
-            FileWriter fw = new FileWriter(CACHE_FILE_NAME, true); // Append vào file
+        try
+        {
+            FileWriter fw = new FileWriter(CACHE_FILE_NAME,true); //true: append new addresses to file
             fw.write(inetAddressResult + "\n");
             fw.close();
-        } catch (IOException ioe) {
+        }
+        catch(IOException ioe)
+        {
             System.err.println("IOException: " + ioe.getMessage());
         }
     }
 
-    // Đọc cache để kiểm tra xem tên miền hoặc IP đã được lưu chưa
-    private String cacheReader(String hostName, String hostAddress) {
+    private String cacheReader(String hostName) {
+
         BufferedReader reader;
         String line;
-        String hostPattern = ".*(" + hostName + "|" + hostAddress + ")\\:";
+        String hostPattern = "^(" + hostName + ")\\:";
         Pattern p = Pattern.compile(hostPattern);
         Matcher m;
 
         try {
-            reader = new BufferedReader(new FileReader(CACHE_FILE_NAME));
-            while ((line = reader.readLine()) != null) {
+            FileReader fileReader = new FileReader(CACHE_FILE_NAME);
+            reader = new BufferedReader(fileReader);
+
+            while((line = reader.readLine()) != null) {
                 m = p.matcher(line);
                 if (m.find()) {
-                    // Tìm thấy tên miền hoặc IP trong cache
+                    // we have the host name in our cache
                     return line;
                 }
             }
-        } catch (FileNotFoundException e) {
-            // Nếu không tìm thấy file cache, tạo file mới trong cacheGenerator
+        }
+        catch (FileNotFoundException e) {
+            // if cache file doesn't exist then create one in cacheGenerator
             System.out.println("- Cache File is generated.");
             return null;
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             System.err.println("IOException: " + e.getMessage());
             return null;
         }
@@ -90,17 +99,20 @@ class dnsQuery extends Thread {
     }
 
     @Override
-    public void run() {
+    public void run(){
         try {
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(),
+                    true);
+            BufferedReader in = new BufferedReader(
+                    new InputStreamReader( clientSocket.getInputStream()));
 
             String inputLine;
-            String userOutput;
+            String userOutput = null;
 
-            while ((inputLine = in.readLine()) != null) {
+            while ((inputLine = in.readLine()) != null)
+            {
                 if (inputLine.equals("hangup")) {
-                    // Đóng kết nối khi nhận được tín hiệu "hangup"
+                    // closing the client socket - in/out stream
                     clientSocket.close();
                     in.close();
                     out.close();
@@ -108,13 +120,12 @@ class dnsQuery extends Thread {
                     break;
                 }
 
-                // Thực hiện tra cứu tên miền hoặc IP
                 userOutput = ipLookup(inputLine);
                 out.println(userOutput);
 
                 System.out.printf("Server to user %d: %s\n", userId, userOutput);
             }
-        } catch (Exception e) {
+        } catch(Exception e){
             System.err.println("Exception: " + e.getMessage());
         }
     }
