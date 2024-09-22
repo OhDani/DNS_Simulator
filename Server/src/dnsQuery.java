@@ -44,7 +44,7 @@ class dnsQuery extends Thread {
             result = hostName + ":" + hostAddress;
 
             String cachedResult;
-            if ((cachedResult = cacheReader(hostName)) == null) {
+            if ((cachedResult = cacheReader(hostName, address)) == null) {
                 // if hostName is not cached, cache it!
                 cacheGenerator(result);
                 return "Root DNS: " + result;
@@ -55,27 +55,25 @@ class dnsQuery extends Thread {
             return "Host not found";
         }
     }
-    private String reverseLookup(String ipAddress) {
-        try {
-            InetAddress inetAddress = InetAddress.getByName(ipAddress);
-            String hostName = inetAddress.getHostName();
-            String hostAddress = inetAddress.getHostAddress();
-
-            String result = hostAddress + ":" + hostName;
-
-            // Kiểm tra cache
-            String cachedResult = cacheReader(hostAddress);
-            if (cachedResult == null) {
-                // Nếu không có trong cache, lưu vào cache
-                cacheGenerator(result);
-                return "Root DNS: " + result;
-            } else {
-                return "Local DNS: " + cachedResult;
-            }
-        } catch (Exception e) {
-            return "IP not found";
-        }
-    }
+//    private String reverseLookup(String address) {
+//        try {
+//            InetAddress inetAddress = InetAddress.getByName(address);
+//            String hostName = inetAddress.getHostName();
+//            String resultIP = address + ":" + hostName;
+//
+//            // Kiểm tra cache
+//            String cachedResultIP = cacheReader(hostName, address); // Tra cứu theo IP
+//            if (cachedResultIP == null) {
+//                // Nếu không có trong cache, lưu vào cache
+//                cacheGenerator(resultIP); // Lưu theo định dạng IP:hostname
+//                return "Root DNS: " + resultIP;
+//            } else {
+//                return "Local DNS: " + cachedResultIP;
+//            }
+//        } catch (Exception e) {
+//            return "IP not found";
+//        }
+//    }
 
 
     private void cacheGenerator(String inetAddressResult) {
@@ -88,16 +86,15 @@ class dnsQuery extends Thread {
         }
     }
 
-    private String cacheReader(String hostName) {
+    private String cacheReader(String hostName, String address) {
         BufferedReader reader;
         String line;
-        String hostPattern = "^(" + hostName + ")\\:";
+        String hostPattern = "^(" + hostName + "|" + address + ")\\:";
         Pattern p = Pattern.compile(hostPattern);
         Matcher m;
 
         try {
-            FileReader fileReader = new FileReader(CACHE_FILE_NAME);
-            reader = new BufferedReader(fileReader);
+            reader = new BufferedReader(new FileReader(CACHE_FILE_NAME));
 
             while ((line = reader.readLine()) != null) {
                 m = p.matcher(line);
@@ -106,7 +103,7 @@ class dnsQuery extends Thread {
                 }
             }
         } catch (FileNotFoundException e) {
-            logArea.append("- Cache File is generated.\n");
+            logArea.append("- Cache file does not exist. Generating new cache file.\n");
             return null;
         } catch (IOException e) {
             logArea.append("IOException: " + e.getMessage() + "\n");
@@ -115,7 +112,6 @@ class dnsQuery extends Thread {
 
         return null;
     }
-
     @Override
     public void run() {
         try {
@@ -130,12 +126,13 @@ class dnsQuery extends Thread {
                 }
 
                 String userOutput;
-                if (inputLine.matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
-                    userOutput = reverseLookup(inputLine); // Nếu là IP
-                } else {
-                    userOutput = ipLookup(inputLine); // Nếu là domain name
-                }
+//                if (inputLine.matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
+//                    userOutput = reverseLookup(inputLine); // Nếu là IP
+//                } else {
+//                    userOutput = ipLookup(inputLine); // Nếu là domain name
+//                }
 
+                userOutput = ipLookup(inputLine);
                 out.println(userOutput);
                 logArea.append("Server to user " + userId + ": " + userOutput + "\n");
             }
