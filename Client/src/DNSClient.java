@@ -40,8 +40,9 @@ public class DNSClient {
 
         // Tạo bảng kết quả
         String[] columnNames = {"Root / Local", "Domain Name", "Address"};
-        tableModel = new DefaultTableModel(columnNames, 0);  // Model chứa dữ liệu của bảng
+        tableModel = new DefaultTableModel(columnNames, 0);
         resultTable = new JTable(tableModel);
+        resultTable.setBackground(new Color(255, 228, 225));
         JScrollPane scrollPane = new JScrollPane(resultTable);
         frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
 
@@ -67,10 +68,10 @@ public class DNSClient {
         String host = JOptionPane.showInputDialog(frame, "Enter server IP:", "localhost");
         if (host == null || host.trim().isEmpty()) {
             JOptionPane.showMessageDialog(frame, "No IP provided, defaulting to localhost.");
-            host = "localhost";  // Nếu người dùng không nhập gì thì mặc định là localhost
+            host = "localhost";
         }
 
-        int port = 5001;  // Có thể cho phép nhập cả port nếu cần
+        int port = 5001;
         try {
             cSock = new Socket(host, port);
             sendOut = new PrintWriter(cSock.getOutputStream(), true);
@@ -86,17 +87,17 @@ public class DNSClient {
         if (!query.isEmpty()) {
             try {
                 sendOut.println(query);
-                String response = readIn.readLine();  // Giả sử server trả về dưới dạng "Local DNS: domain.com:1.2.3.4"
+                String response = readIn.readLine();
 
                 // Kiểm tra nếu server trả về theo format: "Local DNS: domain.com:1.2.3.4"
                 if (response.startsWith("Local DNS:") || response.startsWith("Root DNS:")) {
                     String[] parts = response.split(":\\s+|:");  // Tách chuỗi theo ": " hoặc ":"
 
-                    // Đảm bảo đủ 3 phần: loại DNS, tên miền, và địa chỉ
+                    // Đảm bảo đủ 3 phần: Root or Local DNS, tên miền, và địa chỉ
                     if (parts.length == 3) {
-                        String type = parts[0].trim();  // Local DNS hoặc Root DNS
-                        String domainName = parts[1].trim();  // Tên miền (e.g. youtube.com)
-                        String address = parts[2].trim();  // Địa chỉ IP (e.g. 142.250.207.78)
+                        String type = parts[0].trim();
+                        String domainName = parts[1].trim();
+                        String address = parts[2].trim();
 
                         // Thêm kết quả vào bảng
                         tableModel.addRow(new Object[]{type, domainName, address});

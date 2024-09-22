@@ -41,7 +41,6 @@ public class DNSServer {
 		JScrollPane userScrollPane = new JScrollPane(userList);
 		userScrollPane.setBorder(BorderFactory.createTitledBorder("Connected Users"));
 
-		// Sử dụng JSplitPane để chia tỷ lệ
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrollPane, userScrollPane);
 		splitPane.setDividerLocation(600);
 		splitPane.setResizeWeight(0.75);

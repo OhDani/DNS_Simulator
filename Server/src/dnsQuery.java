@@ -40,36 +40,34 @@ class dnsQuery extends Thread {
         }
 
         if (inetAddress != null) {
-            // Lấy hostName và hostAddress từ InetAddress
             hostName = inetAddress.getHostName();
             hostAddress = inetAddress.getHostAddress();
             result = hostName + ":" + hostAddress;
 
-            // Kiểm tra xem hostName hoặc address có trong cache không
             String[] cachedResult = cacheReader(hostName, address);
             if (cachedResult == null) {
-                // Nếu không có trong cache, ghi vào cache
                 cacheGenerator(result);
                 return "Root DNS: " + result;
             } else {
-                // Nếu có trong cache, trả về kết quả từ cache
                 return "Local DNS: " + cachedResult[0] + ":" + cachedResult[1];
             }
         } else {
             return "Host not found";
         }
     }
-//    private String reverseLookup(String address) {
+
+//    private String reverseLookup(String ipAddress) {
+//        InetAddress inetAddress;
 //        try {
-//            InetAddress inetAddress = InetAddress.getByName(address);
+//            inetAddress = InetAddress.getByName(ipAddress);
 //            String hostName = inetAddress.getHostName();
-//            String resultIP = address + ":" + hostName;
+//            String resultIP = ipAddress + ":" + hostName;
 //
 //            // Kiểm tra cache
-//            String cachedResultIP = cacheReader(hostName, address); // Tra cứu theo IP
+//            String cachedResultIP = Arrays.toString(cacheReader(hostName, ipAddress)); // Tra cứu theo IP
 //            if (cachedResultIP == null) {
 //                // Nếu không có trong cache, lưu vào cache
-//                cacheGenerator(resultIP); // Lưu theo định dạng IP:hostname
+//                cacheGenerator(resultIP);
 //                return "Root DNS: " + resultIP;
 //            } else {
 //                return "Local DNS: " + cachedResultIP;
@@ -78,7 +76,6 @@ class dnsQuery extends Thread {
 //            return "IP not found";
 //        }
 //    }
-
 
     private void cacheGenerator(String inetAddressResult) {
         try {
@@ -148,7 +145,6 @@ class dnsQuery extends Thread {
             logArea.append("Exception: " + e.getMessage() + "\n");
         } finally {
             try {
-                // Đóng kết nối và streams sau khi ngắt kết nối
                 if (clientSocket != null && !clientSocket.isClosed()) {
                     clientSocket.close();
                 }
