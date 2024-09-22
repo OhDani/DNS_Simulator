@@ -28,10 +28,11 @@ class dnsQuery extends Thread {
 
 
     private String ipLookup(String address) {
-        InetAddress inetAddress = null;
+        InetAddress inetAddress;
         String hostName;
         String hostAddress;
         String result;
+
         try {
             inetAddress = InetAddress.getByName(address);
         } catch (Exception e) {
@@ -39,17 +40,20 @@ class dnsQuery extends Thread {
         }
 
         if (inetAddress != null) {
+            // Lấy hostName và hostAddress từ InetAddress
             hostName = inetAddress.getHostName();
             hostAddress = inetAddress.getHostAddress();
             result = hostName + ":" + hostAddress;
 
-            String cachedResult;
-            if ((cachedResult = cacheReader(hostName, address)) == null) {
-                // if hostName is not cached, cache it!
+            // Kiểm tra xem hostName hoặc address có trong cache không
+            String[] cachedResult = cacheReader(hostName, address);
+            if (cachedResult == null) {
+                // Nếu không có trong cache, ghi vào cache
                 cacheGenerator(result);
                 return "Root DNS: " + result;
             } else {
-                return "Local DNS: " + cachedResult;
+                // Nếu có trong cache, trả về kết quả từ cache
+                return "Local DNS: " + cachedResult[0] + ":" + cachedResult[1];
             }
         } else {
             return "Host not found";
@@ -86,7 +90,7 @@ class dnsQuery extends Thread {
         }
     }
 
-    private String cacheReader(String hostName, String address) {
+    private String[] cacheReader(String hostName, String address) {
         BufferedReader reader;
         String line;
         String hostPattern = "^(" + hostName + "|" + address + ")\\:";
@@ -99,7 +103,11 @@ class dnsQuery extends Thread {
             while ((line = reader.readLine()) != null) {
                 m = p.matcher(line);
                 if (m.find()) {
-                    return line;
+                    // Tách hostName và address ra
+                    String[] parts = line.split(":");
+                    if (parts.length == 2) {
+                        return parts; // Trả về mảng chứa hostName và address
+                    }
                 }
             }
         } catch (FileNotFoundException e) {

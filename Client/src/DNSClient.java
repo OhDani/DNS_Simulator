@@ -1,26 +1,25 @@
 import javax.swing.*;
-import javax.swing.border.Border;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.*;
-import java.net.*;
+import java.net.Socket;
 
-import static jdk.jfr.internal.instrument.JDKEvents.initialize;
-
-public class DNSClient{
+public class DNSClient {
     private JFrame frame;
     private JTextField queryField;
-    private JTextArea resultArea;
+    private JTable resultTable;
+    private DefaultTableModel tableModel;
     private JButton queryButton;
     private JButton quitButton;
     private Socket cSock;
     private PrintWriter sendOut;
     private BufferedReader readIn;
-    public DNSClient(){
+
+    public DNSClient() {
         initialize();
         connectToServer();
     }
+
     private void initialize() {
         frame = new JFrame("DNS Client");
         frame.setBounds(100, 100, 600, 400);
@@ -39,16 +38,11 @@ public class DNSClient{
         frame.getContentPane().add(queryField, BorderLayout.NORTH);
         queryField.setColumns(10);
 
-        // Khu vực hiển thị kết quả
-        resultArea = new JTextArea();
-        resultArea.setEditable(false);
-        resultArea.setFont(new Font("Arial", Font.PLAIN, 14));
-        resultArea.setBackground(new Color(255, 228, 225));
-        resultArea.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY, 2),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)
-        ));
-        JScrollPane scrollPane = new JScrollPane(resultArea);
+        // Tạo bảng kết quả
+        String[] columnNames = {"Root / Local", "Domain Name", "Address"};
+        tableModel = new DefaultTableModel(columnNames, 0);  // Model chứa dữ liệu của bảng
+        resultTable = new JTable(tableModel);
+        JScrollPane scrollPane = new JScrollPane(resultTable);
         frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
 
         // Panel chứa nút
@@ -67,36 +61,57 @@ public class DNSClient{
 
         frame.setVisible(true);
     }
+
     private void connectToServer() {
         // Tạo một dialog để nhập IP
         String host = JOptionPane.showInputDialog(frame, "Enter server IP:", "localhost");
         if (host == null || host.trim().isEmpty()) {
-            resultArea.append("No IP provided, defaulting to localhost.\n");
-            host = "localhost"; // Nếu người dùng không nhập gì thì mặc định là localhost
+            JOptionPane.showMessageDialog(frame, "No IP provided, defaulting to localhost.");
+            host = "localhost";  // Nếu người dùng không nhập gì thì mặc định là localhost
         }
 
-        int port = 5001; // Có thể cho phép nhập cả port nếu cần
+        int port = 5001;  // Có thể cho phép nhập cả port nếu cần
         try {
             cSock = new Socket(host, port);
             sendOut = new PrintWriter(cSock.getOutputStream(), true);
             readIn = new BufferedReader(new InputStreamReader(cSock.getInputStream()));
-            resultArea.append("Connected to server at " + host + ":" + port + "\n");
+            JOptionPane.showMessageDialog(frame, "Connected to server at " + host + ":" + port);
         } catch (IOException e) {
-            resultArea.append("Failed to connect to server at " + host + ":" + port + ".\n");
+            JOptionPane.showMessageDialog(frame, "Failed to connect to server at " + host + ":" + port);
         }
     }
+
     private void sendQuery() {
         String query = queryField.getText().trim();
         if (!query.isEmpty()) {
             try {
                 sendOut.println(query);
-                String response = readIn.readLine();
-                resultArea.append("Response: " + response + "\n");
+                String response = readIn.readLine();  // Giả sử server trả về dưới dạng "Local DNS: domain.com:1.2.3.4"
+
+                // Kiểm tra nếu server trả về theo format: "Local DNS: domain.com:1.2.3.4"
+                if (response.startsWith("Local DNS:") || response.startsWith("Root DNS:")) {
+                    String[] parts = response.split(":\\s+|:");  // Tách chuỗi theo ": " hoặc ":"
+
+                    // Đảm bảo đủ 3 phần: loại DNS, tên miền, và địa chỉ
+                    if (parts.length == 3) {
+                        String type = parts[0].trim();  // Local DNS hoặc Root DNS
+                        String domainName = parts[1].trim();  // Tên miền (e.g. youtube.com)
+                        String address = parts[2].trim();  // Địa chỉ IP (e.g. 142.250.207.78)
+
+                        // Thêm kết quả vào bảng
+                        tableModel.addRow(new Object[]{type, domainName, address});
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "Invalid response format from server.");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Unexpected response from server.");
+                }
             } catch (IOException e) {
-                resultArea.append("Error during query.\n");
+                JOptionPane.showMessageDialog(frame, "Error during query.");
             }
         }
     }
+
     private void quit() {
         try {
             sendOut.println("hangup");
@@ -105,17 +120,16 @@ public class DNSClient{
             cSock.close();
             System.exit(0);
         } catch (IOException e) {
-            resultArea.append("Error closing connection.\n");
+            JOptionPane.showMessageDialog(frame, "Error closing connection.");
         }
     }
+
     public static void main(String[] args) {
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    DNSClient window = new DNSClient();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        EventQueue.invokeLater(() -> {
+            try {
+                DNSClient window = new DNSClient();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
     }
