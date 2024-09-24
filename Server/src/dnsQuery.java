@@ -10,6 +10,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 class dnsQuery extends Thread {
     private JTextArea logArea;
@@ -144,6 +146,9 @@ class dnsQuery extends Thread {
         } catch (IOException e) {
             logArea.append("Exception: " + e.getMessage() + "\n");
         } finally {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String currentTime = LocalDateTime.now().format(formatter);
+
             try {
                 if (clientSocket != null && !clientSocket.isClosed()) {
                     clientSocket.close();
@@ -152,7 +157,7 @@ class dnsQuery extends Thread {
             } catch (IOException e) {
                 logArea.append("Error closing connection: " + e.getMessage() + "\n");
             }
-            logArea.append(">> User " + userId + " connection closed.\n");
+            logArea.append(">> User " + userId + " connection closed at " + currentTime + ".\n");
         }
     }
 

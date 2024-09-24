@@ -3,6 +3,8 @@ import java.awt.*;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class DNSServer {
 	private JFrame frame;
@@ -55,12 +57,17 @@ public class DNSServer {
 		try {
 			serverSocket = new ServerSocket(5001);
 			logArea.append("Server started and listening on port 5001...\n");
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 			new Thread(() -> {
 				while (isRunning) {
 					try {
 						Socket clientSocket = serverSocket.accept();
-						String userInfo = "User " + idNumber + " connected.";
+						// Lấy thời gian hiện tại và định dạng
+						String currentTime = LocalDateTime.now().format(formatter);
+
+						// Ghi log bao gồm thời gian kết nối của client
+						String userInfo = "User " + idNumber + " connected at " + currentTime + ".";
 						logArea.append(userInfo + "\n");
 						userListModel.addElement("User " + idNumber);
 
